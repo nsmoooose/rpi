@@ -35,7 +35,7 @@ def publish_sensor_info(zmq_socket, location, t, name, sensor_type, value):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--pin", type=int, default=4)
+    parser.add_argument("--pin", type=int, default=21)
     parser.add_argument("--interval", type=int, default=300)
     parser.add_argument("--sensor_name", default="am2301")
     parser.add_argument("-v", "--verbose", action="store_true", default=False)

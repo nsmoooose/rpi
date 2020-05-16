@@ -21,6 +21,10 @@ if __name__ == "__main__":
     last_temp = -1.0
     last_humidity = -1.0
 
+    with canvas(device) as draw:
+        draw.rectangle(device.bounding_box, outline="white", fill="black")
+        draw.text((5, 5), "Waiting for data", fill="white")
+
     while True:
         msg = zmq_socket.recv_string()
         data = json.loads(msg[msg.find("{"):])
