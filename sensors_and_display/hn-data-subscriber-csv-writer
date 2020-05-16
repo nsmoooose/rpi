@@ -1,0 +1,39 @@
+#!/usr/bin/python3
+import argparse
+import csv
+import json
+import zmq
+import sys
+
+
+def store_sensor_info(dbinfo, sensors, t, name, sensor_type, value):
+    import csv
+    with open("/root/sensors.csv", "a+") as f:
+        writer = csv.writer(f)
+        writer.writerow((t, name, sensor_type, value))
+    return
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("-v", "--verbose", action="store_true", default=False)
+    args = parser.parse_args()
+
+    if args.verbose:
+        print("time,temperature,humidity")
+
+    context = zmq.Context()
+    zmq_socket = context.socket(zmq.SUB)
+    zmq_socket.connect("tcp://0.0.0.0:12346")
+    zmq_socket.setsockopt_string(zmq.SUBSCRIBE, u"")
+
+    while True:
+        msg = zmq_socket.recv_string()
+        data = json.loads(msg[msg.find("{"):])
+
+        if args.verbose:
+            print('{},{},{}'.format(t, temperature, humidity))
+
+        with open("/root/sensors.csv", "a+") as f:
+            writer = csv.writer(f)
+            writer.writerow((data["timestamp"], data["name"], data["type"], data["value"]))

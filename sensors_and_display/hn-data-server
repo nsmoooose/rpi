@@ -1,0 +1,19 @@
+#!/usr/bin/env python3
+import zmq
+import time
+
+context = zmq.Context()
+sub = context.socket(zmq.SUB)
+sub.bind("tcp://*:12345")
+sub.setsockopt_string(zmq.SUBSCRIBE, u"")
+
+pub = context.socket(zmq.PUB)
+pub.bind("tcp://*:12346")
+
+
+while True:
+    try:
+        msg = sub.recv_string(zmq.NOBLOCK)
+        pub.send_string(msg)
+    except zmq.ZMQError as msg:
+        time.sleep(0.5)

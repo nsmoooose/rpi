@@ -1,0 +1,78 @@
+#!/usr/bin/python3
+import Adafruit_DHT
+import argparse
+import configparser
+import datetime
+import json
+import sys
+import time
+import zmq
+
+SENSOR_TEMPERATURE = 1
+SENSOR_HUMIDITY = 2
+
+
+def read_temperature(sensor, pin):
+    humidity, temperature = Adafruit_DHT.read_retry(sensor, pin)
+    if humidity is None or temperature is None:
+        raise Exception("Failed to read sensor data.")
+
+    t = int(time.time())
+    return (t, humidity, temperature)
+
+
+def publish_sensor_info(zmq_socket, location, t, name, sensor_type, value):
+    data = {
+        "timestamp": t,
+        "location": location,
+        "name": name,
+        "type": sensor_type,
+        "value": value
+    }
+    msg = "SENSOR_DATA %s" % json.dumps(data)
+    zmq_socket.send_string(msg)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--pin", type=int, default=4)
+    parser.add_argument("--interval", type=int, default=300)
+    parser.add_argument("--sensor_name", default="am2301")
+    parser.add_argument("-v", "--verbose", action="store_true", default=False)
+    args = parser.parse_args()
+
+    config = configparser.ConfigParser()
+    config.read("/etc/hn-sensors.ini")
+
+    sensors = config["sensors"]
+    location = sensors["location"]
+
+    if args.verbose:
+        print("time,temperature,humidity")
+
+    context = zmq.Context()
+    zmq_socket = context.socket(zmq.PUB)
+    zmq_socket.connect("tcp://localhost:12345")
+
+    while True:
+        start = time.monotonic()
+
+        # Try to grab a sensor reading.  Use the read_retry
+        # method which will retry up to 15 times to get a sensor
+        # reading (waiting 2 seconds between each retry).
+        sensor = 22
+        try:
+            t, humidity, temperature = read_temperature(sensor, args.pin)
+
+            if args.verbose:
+                print('{},{},{}'.format(t, temperature, humidity))
+
+            publish_sensor_info(zmq_socket, location, t, args.sensor_name, SENSOR_TEMPERATURE, temperature)
+            publish_sensor_info(zmq_socket, location, t, args.sensor_name, SENSOR_HUMIDITY, humidity)
+        except Exception as ex:
+            print(str(ex))
+
+        now = time.monotonic()
+        sleep = args.interval - (now - start)
+        if sleep > 0:
+            time.sleep(sleep)
